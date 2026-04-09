@@ -1,46 +1,46 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import ConnectionBanner from '@/components/ConnectionBanner';
+import { parseAgentIdFromSessionKey } from '@clawwork/shared';
 import { AnimatePresence } from 'framer-motion';
 import {
-  PanelRightOpen,
-  PanelRightClose,
+  AlertTriangle,
   Archive,
   ArchiveRestore,
-  Search,
-  MessageSquare,
-  ArrowUp,
   ArrowDown,
-  DollarSign,
-  RefreshCw,
-  AlertTriangle,
   ArrowLeftRight,
+  ArrowUp,
+  DollarSign,
+  MessageSquare,
+  PanelRightClose,
+  PanelRightOpen,
+  RefreshCw,
+  Search,
 } from 'lucide-react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { parseAgentIdFromSessionKey } from '@clawwork/shared';
-import { useTaskStore } from '@/stores/taskStore';
-import { useMessageStore, EMPTY_MESSAGES, activeTurnToMessage } from '@/stores/messageStore';
-import { useUiStore } from '@/stores/uiStore';
-import { useRoomStore } from '@/stores/roomStore';
-import { cn, formatRelativeTime, formatTokenCount, formatCost } from '@/lib/utils';
-import WindowTitlebar from '@/components/semantic/WindowTitlebar';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import ChatMessage from '@/components/ChatMessage';
-import StreamingMessage from '@/components/StreamingMessage';
-import ThinkingIndicator from '@/components/ThinkingIndicator';
 import ChatInput from '@/components/ChatInput';
-import ImageLightbox from '@/components/ImageLightbox';
-import FilePreviewModal from '@/components/FilePreviewModal';
-import EnsembleAgentBar from '@/components/EnsembleAgentBar';
-import FileBrowser from '../FileBrowser';
-import CronPanel from '@/layouts/CronPanel';
-import TeamsPanel from '@/layouts/TeamsPanel';
-import { useUsageStore } from '@/stores/usageStore';
+import ChatMessage from '@/components/ChatMessage';
+import ConnectionBanner from '@/components/ConnectionBanner';
 import DataTable, { type DataTableColumn } from '@/components/data-display/DataTable';
+import EnsembleAgentBar from '@/components/EnsembleAgentBar';
+import FilePreviewModal from '@/components/FilePreviewModal';
+import ImageLightbox from '@/components/ImageLightbox';
+import StreamingMessage from '@/components/StreamingMessage';
 import EmptyState from '@/components/semantic/EmptyState';
 import StatusTag from '@/components/semantic/StatusTag';
+import WindowTitlebar from '@/components/semantic/WindowTitlebar';
+import ThinkingIndicator from '@/components/ThinkingIndicator';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import CronPanel from '@/layouts/CronPanel';
+import TeamsPanel from '@/layouts/TeamsPanel';
+import { cn, formatCost, formatRelativeTime, formatTokenCount } from '@/lib/utils';
+import { activeTurnToMessage, EMPTY_MESSAGES, useMessageStore } from '@/stores/messageStore';
+import { useRoomStore } from '@/stores/roomStore';
+import { useTaskStore } from '@/stores/taskStore';
+import { useUiStore } from '@/stores/uiStore';
+import { useUsageStore } from '@/stores/usageStore';
+import FileBrowser from '../FileBrowser';
 import WelcomeScreen from './WelcomeScreen';
 
 const STICK_TO_BOTTOM_THRESHOLD_PX = 60;
@@ -86,7 +86,14 @@ function resolveAssistantIdentity({
   gatewayId?: string;
   performerBySessionKey: Map<string, { sessionKey: string; agentId: string; agentName: string; emoji?: string }>;
   performerByAgentId: Map<string, { sessionKey: string; agentId: string; agentName: string; emoji?: string }>;
-  catalogAgentById: Map<string, { id: string; name?: string; identity?: { emoji?: string; avatarUrl?: string } }>;
+  catalogAgentById: Map<
+    string,
+    {
+      id: string;
+      name?: string;
+      identity?: { emoji?: string; avatarUrl?: string };
+    }
+  >;
   conductorLabel: string;
 }): AssistantIdentity {
   const resolvedAgentId = agentId ?? (sessionKey ? parseAgentIdFromSessionKey(sessionKey) : undefined);
@@ -354,12 +361,16 @@ function ChatHeader({
                                       ? 'bg-[var(--warning)]'
                                       : 'bg-[var(--accent)]',
                                 )}
-                                style={{ width: `${Math.min(100, w.usedPercent)}%` }}
+                                style={{
+                                  width: `${Math.min(100, w.usedPercent)}%`,
+                                }}
                               />
                             </div>
                             {w.resetAt && (
                               <div className="type-meta text-[var(--text-muted)]">
-                                {t('usage.resetsAt', { time: new Date(w.resetAt).toLocaleTimeString() })}
+                                {t('usage.resetsAt', {
+                                  time: new Date(w.resetAt).toLocaleTimeString(),
+                                })}
                               </div>
                             )}
                           </div>
@@ -419,7 +430,10 @@ function ChatContent() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const closeLightbox = useCallback(() => setLightboxSrc(null), []);
-  const [previewFile, setPreviewFile] = useState<{ path: string; content: string } | null>(null);
+  const [previewFile, setPreviewFile] = useState<{
+    path: string;
+    content: string;
+  } | null>(null);
   const closeFilePreview = useCallback(() => setPreviewFile(null), []);
   const handleHighlightDone = useCallback(() => setHighlightedMessage(null), [setHighlightedMessage]);
   const sessionKeys = useMemo(() => {
@@ -428,14 +442,16 @@ function ChatContent() {
   }, [activeRoom?.performers, activeTask?.sessionKey]);
   const activeTurns = useMemo(
     () =>
-      sessionKeys.reduce<Array<{ sessionKey: string; turn: (typeof activeTurnBySession)[string] }>>(
-        (items, sessionKey) => {
-          const turn = activeTurnBySession[sessionKey];
-          if (turn) items.push({ sessionKey, turn });
-          return items;
-        },
-        [],
-      ),
+      sessionKeys.reduce<
+        Array<{
+          sessionKey: string;
+          turn: (typeof activeTurnBySession)[string];
+        }>
+      >((items, sessionKey) => {
+        const turn = activeTurnBySession[sessionKey];
+        if (turn) items.push({ sessionKey, turn });
+        return items;
+      }, []),
     [activeTurnBySession, sessionKeys],
   );
   const isProcessing = useMemo(
@@ -686,7 +702,7 @@ function ArchivedTasks() {
     });
   }, [tasks, searchQuery, gwInfoMap]);
 
-  const totalArchived = tasks.filter((task) => task.status === 'archived').length;
+  const totalArchived = archivedTasks.length;
 
   const handleReactivate = (taskId: string): void => {
     updateTaskStatus(taskId, 'active');
