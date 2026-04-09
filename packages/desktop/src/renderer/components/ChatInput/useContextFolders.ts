@@ -10,6 +10,7 @@ export function useContextFolders() {
   const prevTaskIdRef = useRef<string>('');
 
   const isContextFolderApiAvailable =
+    typeof window.clawwork !== 'undefined' &&
     typeof window.clawwork.unwatchContextFolder === 'function' &&
     typeof window.clawwork.watchContextFolder === 'function' &&
     typeof window.clawwork.selectContextFolder === 'function' &&
