@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
 import type { FileIndexEntry } from '@clawwork/shared';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTaskStore } from '../../stores/taskStore';
 
 export function useContextFolders() {
@@ -9,42 +9,43 @@ export function useContextFolders() {
   const foldersByTaskRef = useRef<Record<string, string[]>>({});
   const prevTaskIdRef = useRef<string>('');
 
+  const isContextFolderApiAvailable =
+    typeof window.clawwork.unwatchContextFolder === 'function' &&
+    typeof window.clawwork.watchContextFolder === 'function' &&
+    typeof window.clawwork.selectContextFolder === 'function' &&
+    typeof window.clawwork.listContextFiles === 'function';
+
   useEffect(() => {
     const key = activeTaskId ?? '';
     const prevKey = prevTaskIdRef.current;
 
     const prevFolders = foldersByTaskRef.current[prevKey] ?? [];
-    if (typeof window.clawwork.unwatchContextFolder === 'function') {
+    if (isContextFolderApiAvailable) {
       for (const f of prevFolders) window.clawwork.unwatchContextFolder(f);
     }
 
     const nextFolders = foldersByTaskRef.current[key] ?? [];
-    if (typeof window.clawwork.watchContextFolder === 'function') {
+    if (isContextFolderApiAvailable) {
       for (const f of nextFolders) window.clawwork.watchContextFolder(f);
     }
     setContextFolders(nextFolders);
 
     prevTaskIdRef.current = key;
-  }, [activeTaskId]);
+  }, [activeTaskId, isContextFolderApiAvailable]);
 
   useEffect(() => {
     const taskFolders = foldersByTaskRef.current;
     const prevRef = prevTaskIdRef;
     return () => {
       const folders = taskFolders[prevRef.current] ?? [];
-      if (typeof window.clawwork.unwatchContextFolder === 'function') {
+      if (isContextFolderApiAvailable) {
         for (const f of folders) window.clawwork.unwatchContextFolder(f);
       }
     };
-  }, []);
+  }, [isContextFolderApiAvailable]);
 
   const handleAddContextFolder = useCallback(async () => {
-    if (
-      typeof window.clawwork.selectContextFolder !== 'function' ||
-      typeof window.clawwork.watchContextFolder !== 'function'
-    ) {
-      return;
-    }
+    if (!isContextFolderApiAvailable) return;
     const res = await window.clawwork.selectContextFolder();
     if (res.ok && res.result) {
       const path = res.result as unknown as string;
@@ -56,11 +57,11 @@ export function useContextFolders() {
       });
       await window.clawwork.watchContextFolder(path);
     }
-  }, [activeTaskId]);
+  }, [activeTaskId, isContextFolderApiAvailable]);
 
   const handleRemoveContextFolder = useCallback(
     (path: string) => {
-      if (typeof window.clawwork.unwatchContextFolder === 'function') {
+      if (isContextFolderApiAvailable) {
         window.clawwork.unwatchContextFolder(path);
       }
       setContextFolders((prev) => {
@@ -70,7 +71,7 @@ export function useContextFolders() {
         return next;
       });
     },
-    [activeTaskId],
+    [activeTaskId, isContextFolderApiAvailable],
   );
 
   const loadLocalFiles = useCallback(
@@ -79,7 +80,7 @@ export function useContextFolders() {
         setLocalFilesForPicker([]);
         return;
       }
-      if (typeof window.clawwork.listContextFiles !== 'function') {
+      if (!isContextFolderApiAvailable) {
         setLocalFilesForPicker([]);
         return;
       }
@@ -89,7 +90,7 @@ export function useContextFolders() {
         setLocalFilesForPicker(files.filter((f) => f.tier === 'text'));
       }
     },
-    [contextFolders],
+    [contextFolders, isContextFolderApiAvailable],
   );
 
   return {
